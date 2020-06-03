@@ -3,6 +3,7 @@ from dateutil.parser import parse
 import re
 import os
 from google.cloud import bigquery
+import requests
 
 def main(data, context):
   print('Event ID: {}'.format(context.event_id))
@@ -37,7 +38,11 @@ def process_syslog_to_csv(source, destination):
           ip = extract_ip(line)
         except:
           ip = ''
-        country = ''
+        if ip:
+          try:
+            country = get_location_from_ip(ip)
+          except:
+            country = ''
         try:
           user = extract_user(line)
         except:
@@ -77,6 +82,25 @@ def extract_ip(text):
   ip_match = re.search(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", text)
   return ip_match.group(0)
 
+# ip location options:
+# ->ipinfo - Trusted, rich data, e.g. company data. 50,000 searches a month free
+#   ip2location - trusted, download db, then use offline. Paid and free option. Free option only has country, not region.
+#   geoip2 - download db, then use offline.
+#   various APIs
+def get_location_from_ip(ip):
+  r = requests.get(f"https://ipinfo.io/{ip}/geo?token=e467ca729258e4")
+  ip_data = r.json()
+  # {
+  #    'ip': '46.208.110.220',
+  #    'city': 'Chesham',
+  #    'region': 'England',
+  #    'country': 'GB',
+  #    'loc': '51.7000,-0.6000',
+  #    'postal': 'HP5',
+  #    'timezone': 'Europe/London'
+  # } 
+  location = f"{ip_data['city']} {ip_data['region']}"
+  return location
 
 def extract_user(text):
   user_match = re.search(r"(?<=user )\w+", text)
