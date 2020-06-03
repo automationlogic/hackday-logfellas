@@ -1,6 +1,7 @@
 from google.cloud import storage
 from dateutil.parser import parse
 import re
+import os
 from google.cloud import bigquery
 
 def main(data, context):
@@ -16,6 +17,13 @@ def main(data, context):
   filename = data['name']
 
   syslog_to_bq(bucket, filename)
+
+
+def syslog_to_bq_manual():
+  bucket = os.environ.get('BUCKET')
+  filename = os.environ.get('FILENAME')
+  syslog_to_bq(bucket, filename)
+
 
 def syslog_to_bq(bucket, filename):
 
@@ -33,6 +41,7 @@ def syslog_to_bq(bucket, filename):
 
   bq_load('processed_logs', 'ssh_logs', filename + '_processed.csv')
 
+
 def download_blob(bucket_name, source_blob_name, destination_file_name):
 
   storage_client = storage.Client()
@@ -47,19 +56,23 @@ def download_blob(bucket_name, source_blob_name, destination_file_name):
       )
   )
 
+
 def parse_timestamp(log_line):
   parsed_date = parse(log_line, fuzzy_with_tokens=True)
   timestamp = parsed_date[0]
   rest_of_log = ' '.join(parsed_date[1]).strip()
   return (timestamp, rest_of_log)
 
+
 def extract_ip(text):
   ip_match = re.search(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", text)
   return ip_match.group(0)
 
+
 def extract_user(text):
   user_match = re.search(r"(?<=user )\w+", text)
   return user_match.group(0)
+
 
 def bq_load(dataset, table, file):
   client = bigquery.Client()
