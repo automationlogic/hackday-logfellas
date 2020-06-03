@@ -88,7 +88,17 @@ def extract_ip(text):
 #   geoip2 - download db, then use offline.
 #   various APIs
 def get_location_from_ip(ip):
-  r = requests.get(f"https://ipinfo.io/{ip}/geo?token=e467ca729258e4")
+  req_url = f"https://ipinfo.io/{ip}/geo?token=e467ca729258e4"
+  try:
+    r = requests.get(req_url)
+  except requests.exceptions.RequestException as e:
+    print(e)
+    return ''
+  
+  if r.status_code == 429:
+    print('Too many requests for ipinfo account')
+    return ''
+  
   ip_data = r.json()
   # {
   #    'ip': '46.208.110.220',
