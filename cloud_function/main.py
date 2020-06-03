@@ -24,21 +24,32 @@ def syslog_to_bq_manual():
   filename = os.environ.get('FILENAME')
   syslog_to_bq(bucket, filename)
 
+def process_syslog_to_csv(source, destination):
+
+  with open(source, 'r') as f:
+    with open(destination, 'a') as fp:
+      for line in f:
+        try:
+          timestamp = parse_timestamp(line)
+        except:
+          timestamp = ''
+        try:
+          ip = extract_ip(line)
+        except:
+          ip = ''
+        country = ''
+        try:
+          user = extract_user(line)
+        except:
+          user = ''
+
+        fp.write(','.join([timestamp, ip, country, user, line]))
 
 def syslog_to_bq(bucket, filename):
 
   download_blob(bucket, filename, filename)
 
-  with open(filename, 'r') as f:
-    with open(filename + '_processed.csv', 'a') as fp:
-      for line in f:
-        (timestamp, rest_of_log) = parse_timestamp(line)
-        ip = extract_ip(rest_of_log)
-        country = ''
-        user = extract_user(rest_of_log)
-
-        fp.write(','.join([timestamp, ip, country, user, rest_of_log]))
-
+  process_syslog_to_csv(filename, filename + '_processed.csv')
   bq_load('processed_logs', 'ssh_logs', filename + '_processed.csv')
 
 
@@ -58,10 +69,8 @@ def download_blob(bucket_name, source_blob_name, destination_file_name):
 
 
 def parse_timestamp(log_line):
-  parsed_date = parse(log_line, fuzzy_with_tokens=True)
-  timestamp = parsed_date[0]
-  rest_of_log = ' '.join(parsed_date[1]).strip()
-  return (timestamp, rest_of_log)
+  parsed_date = parse(log_line[0:20], fuzzy=True)
+  return parsed_date.strftime(r"%Y-%m-%d %H:%M:%S")
 
 
 def extract_ip(text):
@@ -81,7 +90,7 @@ def bq_load(dataset, table, file):
   table_ref = dataset_ref.table(table)
   job_config = bigquery.LoadJobConfig()
   job_config.source_format = bigquery.SourceFormat.CSV
-  job_config.skip_leading_rows = 1
+  job_config.skip_leading_rows = 0
   job_config.autodetect = True
   
   with open(file, "rb") as source_file:
