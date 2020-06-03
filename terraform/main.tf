@@ -11,7 +11,7 @@ resource "google_bigquery_dataset" "dataset" {
 }
 
 resource "google_bigquery_table" "dataset" {
-  dataset_id = "processed_log"
+  dataset_id = "${google_bigquery_dataset.dataset.dataset_id}"
   table_id   = "ssh_log"
 
   schema = <<EOF
