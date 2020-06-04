@@ -30,6 +30,7 @@ def process_syslog_to_csv(source, destination):
   with open(source, 'r') as f:
     with open(destination, 'a') as fp:
       for line in f:
+        country = ''
         try:
           timestamp = parse_timestamp(line)
         except:
